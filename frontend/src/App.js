@@ -1,15 +1,41 @@
 import "./index.css";
-import Chat from './components/Chat/Chat';
-import useSocket from "./service/socket";
+import "./App.css";
+import Chat from "./components/Chat/Chat";
 import { useState } from "react";
 
 function App() {
-  const [channel, setChannel] = useState('general');
-  const { channels } = useSocket(channel);
+  const [nickname, setNickname] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  const handleNicknameChange = (event) => {
+    setNickname(event.target.value.trim());
+  };
+
+  const handleNicknameSubmit = () => {
+    if (!nickname.length) return;
+
+    setLoggedIn(true);
+  };
 
   return (
-    <Chat channelList={channels} />
-  )
+    <div className="main-div">
+      {!loggedIn ? (
+        <div className="login-container">
+          <input
+            className="text-input-field"
+            onChange={handleNicknameChange}
+            placeholder="Enter nickname..."
+            type="text"
+          />
+          <button className="login-button" onClick={handleNicknameSubmit}>
+            Login
+          </button>
+        </div>
+      ) : (
+        <Chat nickname={nickname} />
+      )}
+    </div>
+  );
 }
 
 export default App;

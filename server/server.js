@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const socketIO = require('socket.io');
 const { addMessage, getChannelMessages } = require('./messages');
+const { channels, addUserToChannel, removeUserFromChannel } = require('./channels');
 
 const app = express();
 app.use(cors());
@@ -16,27 +17,37 @@ const io = socketIO(server, {
 
 const PORT = 8080;
 
-const channels = [
-    {
-        id: 1,
-        name: 'general',
-        users: 0,
-    }
-];
-
 io.on('connection', (socket) => {
-    const { channelName } = socket.handshake.query;
-    console.log(`${socket.id} has connected to channel ${channelName}`);
+    const { currentChannel } = socket.handshake.query;
+    console.log(`${socket.id} has connected to channel ${currentChannel}`);
+    socket.join(currentChannel);
 
     socket.on('CHANNEL_JOIN', (channelName) => {
-        const [channelData] = channels.filter((channel) => channel.name === channelName);
-        if(channelData) {
-            channelData.users++;
-        }
+        addUserToChannel(socket.id, channelName);
+        io.in(channelName).emit('CHANNEL_JOINED', channels);
+        const welcomeMsg = addMessage(channelName, {body: socket.id + ' has joined the channel'}, 'System');
+        io.in(channelName).emit('NEW_MESSAGE', welcomeMsg);
     });
 
+    socket.on('NEW_MESSAGE', (data) => {
+        const { body, user } = data;
+        const msg = addMessage(currentChannel, data);
 
-    socket.on('disconnect', () => console.log(`${socket.id} has disconnected`));
+        io.in(currentChannel).emit('NEW_MESSAGE', msg);
+    });
+
+    socket.on('CHANNEL_LEFT', () => {
+        removeUserFromChannel(socket.id);
+        io.emit('CHANNEL_LEFT', channels);
+    })
+
+
+    socket.on('disconnect', () => {
+        removeUserFromChannel(socket.id);
+        io.emit('CHANNEL_LEFT', channels);
+        console.log(`${socket.id} has disconnected`);
+        socket.leave(currentChannel);
+    });
 });
 
 app.get('/channels/:channel/messages', (req, res) => {
