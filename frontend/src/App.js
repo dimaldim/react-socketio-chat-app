@@ -1,7 +1,8 @@
 import "./index.css";
 import "./App.css";
-import Chat from "./components/Chat/Chat";
 import { useState } from "react";
+import Chat from "./components/Chat/Chat";
+import LoginDialog from "./components/LoginDialog";
 
 function App() {
   const [nickname, setNickname] = useState("");
@@ -11,8 +12,10 @@ function App() {
     setNickname(event.target.value.trim());
   };
 
-  const handleNicknameSubmit = () => {
+  const handleNicknameSubmit = (e) => {
     if (!nickname.length) return;
+
+    e.preventDefault();
 
     setLoggedIn(true);
   };
@@ -20,17 +23,10 @@ function App() {
   return (
     <div className="main-div">
       {!loggedIn ? (
-        <div className="login-container">
-          <input
-            className="text-input-field"
-            onChange={handleNicknameChange}
-            placeholder="Enter nickname..."
-            type="text"
-          />
-          <button className="login-button" onClick={handleNicknameSubmit}>
-            Login
-          </button>
-        </div>
+        <LoginDialog
+          nicknameChange={handleNicknameChange}
+          nicknameSubmit={handleNicknameSubmit}
+        />
       ) : (
         <Chat nickname={nickname} />
       )}

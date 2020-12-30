@@ -2,36 +2,26 @@ const channels = [
   {
     id: 1,
     name: "general",
-    users: 0,
-    activeConnections: [],
+    users: [],
   },
   {
     id: 2,
-    name: "test",
-    users: 0,
-    activeConnections: [],
+    name: "test 1",
+    users: [],
+  },
+  {
+    id: 3,
+    name: "test 2",
+    users: [],
   },
 ];
 
-const addUserToChannel = (socketId, channelName) => {
-  const [channel] = channels.filter((c) => c.name === channelName);
+const addUserToChannel = (channel, nickname) => {
+  channels.filter((c) => c.name === channel).map((c) => {
+    c.users.push(nickname);
 
-  if (channel) {
-    channel.users++;
-    channel.activeConnections.push(socketId);
-  }
-};
+    return c;
+  });
+}
 
-const removeUserFromChannel = (socketId) => {
-  const [userChannel] = channels.filter(
-    (channel) => channel.activeConnections.indexOf(socketId) !== -1
-  );
-
-  if (userChannel) {
-    const connectionIndex = userChannel.activeConnections.indexOf(socketId);
-    userChannel.activeConnections.splice(connectionIndex, 1);
-    userChannel.users--;
-  }
-};
-
-module.exports = { channels, addUserToChannel, removeUserFromChannel };
+module.exports = { channels, addUserToChannel };

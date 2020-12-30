@@ -1,64 +1,67 @@
-const http = require('http');
-const express = require('express');
-const cors = require('cors');
-const socketIO = require('socket.io');
-const { addMessage, getChannelMessages } = require('./messages');
-const { channels, addUserToChannel, removeUserFromChannel } = require('./channels');
+const http = require("http");
+const express = require("express");
+const cors = require("cors");
+const socketIO = require("socket.io");
+const { addMessage, getChannelMessages } = require("./messages");
+const {
+  channels,
+  addUserToChannel
+} = require("./channels");
+
+const { users, addUser, removeUser } = require('./users');
 
 const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
 const io = socketIO(server, {
-    cors: {
-        origin: '*',
-    }
+  cors: {
+    origin: "*",
+  },
 });
 
 const PORT = 8080;
 
-io.on('connection', (socket) => {
-    const { currentChannel } = socket.handshake.query;
-    console.log(`${socket.id} has connected to channel ${currentChannel}`);
-    socket.join(currentChannel);
+io.on("connection", (socket) => {
+  // Get nickname and channel.
+  const { nickname, channel } = socket.handshake.query;
+  console.log(`${nickname} connected`);
+  // Join the user to the channel.
+  socket.join(channel);
+  addUser(nickname, socket.id);
+  addUserToChannel(channel, nickname);
 
-    socket.on('CHANNEL_JOIN', (channelName) => {
-        addUserToChannel(socket.id, channelName);
-        io.in(channelName).emit('CHANNEL_JOINED', channels);
-        const welcomeMsg = addMessage(channelName, {body: socket.id + ' has joined the channel'}, 'System');
-        io.in(channelName).emit('NEW_MESSAGE', welcomeMsg);
-    });
+  // Handle disconnect
+  socket.on("disconnect", () => {
+    console.log(`${nickname} disconnected`);
+    removeUser(nickname);
+  });
 
-    socket.on('NEW_MESSAGE', (data) => {
-        const { body, user } = data;
-        const msg = addMessage(currentChannel, data);
+  socket.on("CHANNEL_SWITCH", (data) => {
+    const { prevChannel, channel } = data;
+    if (prevChannel) {
+      socket.leave(prevChannel);
+    }
+    if (channel) {
+      socket.join(channel);
+    }
+  });
 
-        io.in(currentChannel).emit('NEW_MESSAGE', msg);
-    });
-
-    socket.on('CHANNEL_LEFT', () => {
-        removeUserFromChannel(socket.id);
-        io.emit('CHANNEL_LEFT', channels);
-    })
-
-
-    socket.on('disconnect', () => {
-        removeUserFromChannel(socket.id);
-        io.emit('CHANNEL_LEFT', channels);
-        console.log(`${socket.id} has disconnected`);
-        socket.leave(currentChannel);
-    });
+  socket.on('MESSAGE_SEND', (data) => {
+      addMessage(data);
+      const { channel } = data;
+      socket.broadcast.to(channel).emit('NEW_MESSAGE', data)
+  });
 });
 
-app.get('/channels/:channel/messages', (req, res) => {
-    const allMessages = getChannelMessages(req.params.channel);
+app.get("/channels/:channel/messages", (req, res) => {
+  const allMessages = getChannelMessages(req.params.channel);
 
-    return res.json({ allMessages });
+  return res.json({ allMessages });
 });
 
-app.get('/getChannels', (req, res) => {
-
-    return res.json({ channels });
+app.get("/getChannels", (req, res) => {
+  return res.json({ channels });
 });
 
 server.listen(PORT, () => console.log(`Server listening to port ${PORT}`));
