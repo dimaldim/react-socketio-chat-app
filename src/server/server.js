@@ -3,12 +3,9 @@ const express = require("express");
 const cors = require("cors");
 const socketIO = require("socket.io");
 const { addMessage, getChannelMessages } = require("./messages");
-const {
-  channels,
-  addUserToChannel
-} = require("./channels");
+const { channels, addUserToChannel } = require("./channels");
 
-const { users, addUser, removeUser } = require('./users');
+const { addUser, removeUser } = require("./users");
 
 const app = express();
 app.use(cors());
@@ -47,10 +44,10 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on('MESSAGE_SEND', (data) => {
-      addMessage(data);
-      const { channel } = data;
-      socket.broadcast.to(channel).emit('NEW_MESSAGE', data)
+  socket.on("MESSAGE_SEND", (data) => {
+    addMessage(data);
+    const { channel } = data;
+    socket.broadcast.to(channel).emit("NEW_MESSAGE", data);
   });
 });
 
